@@ -3,6 +3,7 @@ import threading
 import sys
 import tkinter as tk
 import random
+import time
 
 color = ['black', 'red'] # black (#000000) e o red (#FF0000)
 pause = 1
@@ -10,9 +11,11 @@ palavra = 'teste'
 connections = []
 udp_address =[]
 flagInverterPapeis = False
-HOST = sys.argv[1] if len(sys.argv) > 1 else '127.0.0.1' #conecta no local host caso nao tenha o argumento do ip
+HOST = sys.argv[1] if len(sys.argv) > 1 else '0.0.0.0' #conecta no local host caso nao tenha o argumento do ip
 PORT = 5555
-UDP_PORT = 6666
+UDP_PORT_DRAW = 6666
+TCP_PORT_ANSWER = 6667
+
 
 
 class serverDraw:
@@ -50,7 +53,9 @@ class serverDraw:
 				
 	def send_line(self, x1, y1, x2, y2, color):
 		msg = f"{x1},{y1},{x2},{y2},{color}\n"
-		self.sock.sendto(msg.encode('utf-8'), (connections[0],UDP_PORT))
+		if connections:
+			self.sock.sendto(msg.encode('utf-8'), (connections[0],UDP_PORT_DRAW))
+
 
 class clientDraw:
 	def __init__(self, root, sock):
@@ -120,65 +125,79 @@ def listen():#escuta o handshake
 	connection, address = server.accept()
 	connections.append(address[0])
 	print(f"Accepted connection from {address}")
+	connection.close() 
+	server.close()
+
 
 
 def connect():#conecta o handshake
-    try:
-        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect((HOST,PORT))
-        connections.append(client.getpeername()[0])
-    except socket.error as e: 
-        print(f"Erro na tentativa de conexão em {HOST}:{PORT}\n Erro: {e}")
+	try:
+		client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		client.connect((HOST,PORT))
+		connections.append(client.getpeername()[0])
+		client.close()
+	except socket.error as e: 
+		print(f"Erro na tentativa de conexão em {HOST}:{PORT}\n Erro: {e}")
 
-def testarResposta(palavra):####servidor
+def testarResposta(palavra):####servidor tcp
 	global flagInverterPapeis
-	serverResposta = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	serverResposta = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	serverResposta.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-	serverResposta.bind((HOST, UDP_PORT))
-    
-	data, addr = serverResposta.recvfrom(4096) #4096 tamanho do buffer
-	mensagem = data.decode('utf-8')
-	if(mensagem == palavra):
-		serverResposta.sendto('certo'.encode('utf-8'), addr)
-		print("Acertou\n")
-		flagInverterPapeis = True
-	else:
-		serverResposta.sendto('errado'.encode('utf-8'), addr)
-		print("errado\n")
+	serverResposta.bind(('0.0.0.0', TCP_PORT_ANSWER))
+	serverResposta.listen(1)
+
+	conn, addr = serverResposta.accept() # Aceita a conexao TCP do cliente
+
+
+	
+	while not flagInverterPapeis:
+		data = conn.recv(4096) #4096 tamanho do buffer
+		mensagem = data.decode('utf-8')
+		print("Jogador: " + mensagem)
+		if(mensagem.lower() == palavra.lower()):
+			conn.sendall('certo'.encode('utf-8'))#usa conn já que o serverresposta é o de ouvir	
+			print("Acertou\n")
+			flagInverterPapeis = True
+		else:
+			conn.sendall('errado'.encode('utf-8'))
+			print("errado\n")
+		
 	serverResposta.close()
 		
+
+
 def perguntarResposta():####cliente
 	global flagInverterPapeis
-	resposta = str(input("Palavra?\n")) 
-	clienteResposta = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-	clienteResposta.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+	clienteResposta = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	conectado = False
+	for i in range(10):
+		try:
+			clienteResposta.connect((connections[0], TCP_PORT_ANSWER))
+			conectado = True
+			break
+		except ConnectionRefusedError:
+			time.sleep(0.5)
 	
-	clienteResposta.sendto(resposta.encode('utf-8'), (connections[0],UDP_PORT))
-	dados_resposta, addr = clienteResposta.recvfrom(4096)
-	mensagem = dados_resposta.decode('utf-8')
-	if(mensagem == 'certo'):
-		flagInverterPapeis = True
-		print("Acertou\n")
-	else:
-		print("errado\n")
-	clienteResposta.close()
+	while not flagInverterPapeis:
+		resposta = input("Palavra? ").strip()
+		clienteResposta.sendall(resposta.encode('utf-8'))
+		dados = clienteResposta.recv(4096)
+		mensagem = dados.decode('utf-8')
+		if mensagem == 'certo':
+			flagInverterPapeis = True
+			print("Você acertou!")
+		else:
+			print("Errado, tente novamente\n")
+		
+
 		
 
 def sorteadorPalavras(): #sortear palavra a ser desennhada/adivinhada
       listaPalavras = ["banana", "garrafa", "celular", "tesoura" ]
 
       palavraSorteada = random.choice(listaPalavras)
-
+      print(palavraSorteada)
       return palavraSorteada
-
-def sendData(dados):
-    for connection in connections:
-        try:
-            connection.sendall(dados.encode())
-        except socket.error as e:
-            print(f"Falha ao enviar dados. Erro: {e}")
-            connections.remove(connection)
-
 
 
 ##################################################################
@@ -190,7 +209,15 @@ def rodada_servidor(palavra):
 
 	root = tk.Tk()
 	serverDraw(root, serverSock)
-	
+
+	#gemini para matar a janela
+	def verificar_fim():
+		if flagInverterPapeis:
+			root.destroy()  # Fecha a janela do Tkinter para a rodada terminar!
+		else:
+			root.after(200, verificar_fim)  # Checa a cada 200m		
+	verificar_fim()  # Inicia a checagem
+
 	t_resp = threading.Thread(target=testarResposta, args=(palavra,), daemon=True) 
 	
 	t_resp.start()
@@ -200,10 +227,21 @@ def rodada_servidor(palavra):
 def rodada_cliente():
 	clientSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	clientSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-	clientSock.bind(('0.0.0.0',UDP_PORT))
+	clientSock.bind((connections[0],UDP_PORT_DRAW))
 	root = tk.Tk()
 	clientDraw(root, clientSock)
 	
+	def verificar_fim():
+		if flagInverterPapeis:
+			root.destroy()  # Fecha a janela para encerrar a rodada!
+		else:
+			root.after(200, verificar_fim)
+
+	verificar_fim()
+
+
+
+
 	t_resp = threading.Thread(target=perguntarResposta, daemon=True)
 	
 		
@@ -214,24 +252,30 @@ def rodada_cliente():
 
 def main():
 	global flagInverterPapeis
-	opcao = int(input("Hospedar um servidor ou Entrar em um servidor? (Responda com 0 ou 1)"))
-	if(opcao == 0): #esta criando um servidor novo (servidor). Tem a prioridade para começar a desenhar na tela
+	opcao = str(input("Hospedar um servidor ou Entrar em um servidor? (Responda com HOST ou JOIN)"))
+	if opcao.lower() == "host":
+		opcao1 = 0
+	if opcao.lower() == "join":
+		opcao1 = 1
+	if(opcao1 == 0): #esta criando um servidor novo (servidor). Tem a prioridade para começar a desenhar na tela
 		flagDesenhista = True
+		palavra = sorteadorPalavras()
 		threading.Thread(target=listen, daemon=True).start()
 		while not connections:
 			pass
-	if(opcao == 1): #esta entrando em um servidor (cliente)
+	if(opcao1 == 1): #esta entrando em um servidor (cliente)
 		flagDesenhista = False
 		connect()
 	while(pause):
 		if(flagDesenhista):
-			palavra = sorteadorPalavras()
 			rodada_servidor(palavra)
             
 		elif(not flagDesenhista):
 			rodada_cliente()
 		if (flagInverterPapeis):
 			flagDesenhista = not flagDesenhista
+			if flagDesenhista:
+				palavra = sorteadorPalavras()
 			flagInverterPapeis = False
 
 if __name__ == '__main__':
