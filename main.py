@@ -18,7 +18,7 @@ pause = True
 flagDesenhista = None
 client = None
 server = None
-flagInverterPapeis = None
+flagInverterPapeis = False
 
 def main():
     global flagDesenhista
@@ -43,42 +43,26 @@ def main():
         print(f"Opção Inválida: {e} \n Encerrando o programa.")
         sys.exit(1)
 
+    root = tk.Tk()
     while(pause):
-        if(flagDesenhista):
-            root = tk.Tk()
-            drawer_interface = gameInterface(root, net_object, isDrawer=True, UDP_PORT=UDP_PORT)
 
-            if isinstance(net_object, Server):
-                word = net_object.defineRandomWord()
-                net_object.roundServer(word, root)
-            else:
-                pass
+        if(flagDesenhista):
+            drawer_interface = gameInterface(root, net_object, isDrawer=True, UDP_PORT=UDP_PORT)
+            word = net_object.defineRandomWord()
+            net_object.roundDrawer(word, root)
             
         elif(not flagDesenhista):
-            root = tk.Tk()
             viewer_interface = gameInterface(root, net_object, isDrawer=False, UDP_PORT=UDP_PORT)
+            net_object.roundGuesser(root, viewer_interface)
 
-            if isinstance(net_object, Client):
-                net_object.roundClient(root, viewer_interface)
-            else:
-                pass
-
-        is_correct = False
-        if isinstance(net_object, Server) and net_object.flagInverterPapeis:
-            is_correct = True
+        if net_object.flagInverterPapeis:
+            print("\nPapeis invertidos! O desenhista agora é o adivinhador e vice-versa.")
             net_object.flagInverterPapeis = False
 
-        if isinstance(net_object, Client) and net_object.flagInverterPapeis:
-            is_correct = True
-            net_object.flagInverterPapeis = False
-
-        if is_correct:
-            print("Papeis invertidos! O desenhista agora é o adivinhador e vice-versa.")
-            flagDesenhista = not flagDesenhista
         else:
-            print("Ninguém acertou!")
-            flagDesenhista = not flagDesenhista
-        
+            print("\nNinguém acertou! Trocando de papéis...")
+
+        flagDesenhista = not flagDesenhista  
         sleep(1)
 
 if __name__ == '__main__':

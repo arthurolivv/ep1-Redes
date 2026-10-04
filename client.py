@@ -1,8 +1,10 @@
+import select
 import socket
-import threading
+import sys
 import tkinter as tk
+from roles import Drawer, Guesser
 
-class Client:
+class Client(Drawer, Guesser):
 	def __init__(self):
 		self.HOST = None
 		self.TCP_PORT = None
@@ -39,65 +41,3 @@ class Client:
 
 		except socket.error as e: 
 			print(f"Erro na tentativa de handshake em {self.HOST}:{self.TCP_PORT}\n Erro: {e}")
-	
-	def roundClient(self, root, interface):
-		self.flagInverterPapeis = False
-
-		#gemini para matar a janela
-		def check_end():
-			if self.flagInverterPapeis:
-				root.destroy()
-			else:
-				root.after(100, check_end)
-		check_end()
-
-		t_listen = threading.Thread(target=self.listen_server, args=(interface,), daemon=True)
-		t_listen.start()
-
-		t_resp = threading.Thread(target=self.askResponse, daemon=True)
-		t_resp.start()
-		root.mainloop()	
-		t_resp.join()
-
-	def listen_server(self, interface):
-		while not self.flagInverterPapeis:
-			try:
-				#recebe mensagem do servidor
-				data, addr = self.sockUDP.recvfrom(4096)
-				msg = data.decode('utf-8')
-
-				if(msg.startswith("SYS:")):
-					word_recieve = msg.replace("SYS:", "").strip()
-					if word_recieve == "success":
-						self.flagInverterPapeis = True
-						print("Parabéns, você acertou!\n")
-
-					elif word_recieve == "fail":
-						self.flagInverterPapeis = False
-						print("Errou, tente novamente.\n")
-
-					elif word_recieve == "timeout":
-						self.flagInverterPapeis = True
-						print("Tempo esgotado!")
-
-				elif msg.startswith("DRAW:"):
-					interface.process_draw(msg)
-
-			except Exception:
-				break
-
-	def askResponse(self):
-		while not self.flagInverterPapeis:
-			try:
-				response = str(input("Insira sua tentativa de resposta:\n")).strip()
-				
-				#recomendaçao do claude para não enviar mensagens vazias e entupir o servidor
-				if not response:
-					print("Resposta vazia, tente novamente.")
-					continue
-
-				send = f"CHAT:{response}\n"
-				self.sockUDP.sendto(send.encode('utf-8'), (self.HOST, self.UDP_PORT))
-
-			except Exception as e:
-				print(f"Erro ao enviar resposta: {e}")

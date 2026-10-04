@@ -5,27 +5,33 @@ from server import Server
 color = ['black', 'red'] # black (#000000) e o red (#FF0000)
 
 class gameInterface:
-    def __init__(self, root, type, isDrawer, UDP_PORT=None):
+    def __init__(self, root, net_object, isDrawer, UDP_PORT=None):
         self.root = root
-        self.type = type
+        self.net_object = net_object
         self.isDrawer = isDrawer
-        self.sock = type.sockUDP
-        self.UDP_PORT = type.UDP_PORT
+
+
+        #apaga conteudo do canvas atual antes de iniciar um novo
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+        self.sock = net_object.sockUDP
+        self.UDP_PORT = net_object.UDP_PORT
         self.connections = []
 
-        if isinstance(self.type, Server): 
-            self.connections = type.connections
+        if isinstance(self.net_object, Server): 
+            self.connections = net_object.connections
         else:
             #cliente envia desenhos pro servidor na porta definida, que 
             #repassa pro outro cliente dps
-            self.connections = [(type.HOST, type.UDP_PORT)]
+            self.connections = [(net_object.HOST, net_object.UDP_PORT)]
         
         if isDrawer:
             role = 'Desenhista'
         else:
             role = 'Adivinhador'
 
-        self.root.title(f"Seu IP: {self.type.HOST} = {role}")
+        self.root.title(f"Seu IP: {self.net_object.HOST} = {role}")
         self.root.attributes('-topmost', True)
 
         self.canvas = tk.Canvas(root, width=800, height=600, bg='white')
