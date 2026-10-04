@@ -15,27 +15,29 @@ TCP_PORT = 5555
 UDP_PORT = 5556
 
 pause = True
-flagDesenhista = False
+flagDesenhista = None
 client = None
 server = None
+flagInverterPapeis = None
 
 def main():
     global flagDesenhista
-    server, client = None, None
+    global flagInverterPapeis
+    net_object = None
     
     try:
         opcao = int(input("Hospedar (0) ou Entrar (1) em um servidor?"))
         if(opcao == 0): #esta criando um servidor novo (servidor). Tem a prioridade para começar a desenhar na tela
             flagDesenhista = True
-            server = Server(HOST, TCP_PORT, UDP_PORT)
-            server.start()
-            while len(server.connections) == 0: # Sugestão do claude para não consumir CPU enquanto aguarda conexões
+            net_object = Server(HOST, TCP_PORT, UDP_PORT)
+            net_object.start()
+            while len(net_object.connections) == 0: # Sugestão do claude para não consumir CPU enquanto aguarda conexões
                 time.sleep(0.1) 
                 
         elif(opcao == 1): #esta entrando em um servidor (cliente)
             flagDesenhista = False
-            client = Client()
-            client.connectTo(HOST, TCP_PORT, UDP_PORT) 
+            net_object = Client()
+            net_object.connectTo(HOST, TCP_PORT, UDP_PORT) 
         
     except ValueError as e:
         print(f"Opção Inválida: {e} \n Encerrando o programa.")
@@ -44,30 +46,40 @@ def main():
     while(pause):
         if(flagDesenhista):
             root = tk.Tk()
-            drawer_interface = gameInterface(root, server, isDrawer=True, UDP_PORT=UDP_PORT)
-            word = server.defineRandomWord()
-            server.roundServer(word, root)
+            drawer_interface = gameInterface(root, net_object, isDrawer=True, UDP_PORT=UDP_PORT)
+
+            if isinstance(net_object, Server):
+                word = net_object.defineRandomWord()
+                net_object.roundServer(word, root)
+            else:
+                pass
             
         elif(not flagDesenhista):
             root = tk.Tk()
-            viewer_interface = gameInterface(root, client, isDrawer=False, UDP_PORT=UDP_PORT)
-            client.roundClient(root)
-            time.sleep(15)
+            viewer_interface = gameInterface(root, net_object, isDrawer=False, UDP_PORT=UDP_PORT)
 
-        check_response = False
-        if server and server.flagInverterPapeis:
-            flagDesenhista = not flagDesenhista
-            check_response = True
-            server.flagInverterPapeis = False
+            if isinstance(net_object, Client):
+                net_object.roundClient(root, viewer_interface)
+            else:
+                pass
 
-        if client and client.flagInverterPapeis:
-            flagDesenhista = not flagDesenhista
-            check_response = True
-            client.flagInverterPapeis = False
+        is_correct = False
+        if isinstance(net_object, Server) and net_object.flagInverterPapeis:
+            is_correct = True
+            net_object.flagInverterPapeis = False
 
-        if check_response:
+        if isinstance(net_object, Client) and net_object.flagInverterPapeis:
+            is_correct = True
+            net_object.flagInverterPapeis = False
+
+        if is_correct:
             print("Papeis invertidos! O desenhista agora é o adivinhador e vice-versa.")
             flagDesenhista = not flagDesenhista
+        else:
+            print("Ninguém acertou!")
+            flagDesenhista = not flagDesenhista
+        
+        sleep(1)
 
 if __name__ == '__main__':
     main()
