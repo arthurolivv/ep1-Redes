@@ -1,55 +1,99 @@
+import random
 import socket
 import threading
 
-HOST = '0.0.0.0'
-PORT = 5555
+class Server:
+	def __init__(self, HOST, TCP_PORT, UDP_PORT):
+		self.connections = []
+		self.HOST = HOST
+		self.TCP_PORT = TCP_PORT
+		self.UDP_PORT = UDP_PORT
 
-clients = []  # lista de sockets conectados
-lock = threading.Lock()
+		self.sockTCP = None
+		self.sockUDP = None
 
+		self.flagInverterPapeis = None
 
-def broadcast(data, sender_conn):
-    """Reenvia os dados recebidos de um cliente para todos os outros."""
-    with lock:
-        for c in clients:
-            if c is not sender_conn:
-                try:
-                    c.sendall(data)
-                except Exception:
-                    pass
+	def start(self):
 
+		try:
+			#cria socket TCP pro handshake
+			self.sockTCP = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			self.sockTCP.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+			self.sockTCP.bind((self.HOST, self.TCP_PORT))
+			print(f"Servidor TCP iniciado em {self.HOST}:{self.TCP_PORT}")
 
-def handle_client(conn, addr):
-    print(f"[+] Conectado: {addr}")
-    with lock:
-        clients.append(conn)
+			threading.Thread(target=self.listen, args=(), daemon=True).start()
 
-    with conn:
-        while True:
-            try:
-                data = conn.recv(4096)
-                if not data:
-                    break
-                broadcast(data, conn)
-            except ConnectionError:
-                break
+			#cria socket UDP para envio e recebimento de dados
+			self.sockUDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+			self.sockUDP.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+			print(f"Servidor UDP iniciado em {self.HOST}:{self.UDP_PORT}")
 
-    with lock:
-        clients.remove(conn)
-    print(f"[-] Desconectado: {addr}")
+		except socket.error as e:
+			print(f"Erro ao criar sockets: {e}")
+			return
 
 
-def main():
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server.bind((HOST, PORT))
-    server.listen()
-    print(f"Servidor rodando em {HOST}:{PORT}")
+	#abrir escuta de conexoes TCP
+	def listen(self):
+		self.sockTCP.listen()
+		while True:
+			#https://blog.devgenius.io/implementing-peer-to-peer-data-exchange-in-python-8e69513489af
+			connection, address = self.sockTCP.accept()
+			self.connections.append(address[0])
+			print(f"Conexão estabelecida com: {address}")
 
-    while True:
-        conn, addr = server.accept()
-        threading.Thread(target=handle_client, args=(server, addr), daemon=True).start()
+	#sortear palavra a ser desenhada/adivinhada
+	def defineRandomWord(self):
+		words = ["banana", "garrafa", "celular", "tesoura" ]
+		randomWord = random.choice(words)
+		return randomWord
+	
+	def roundServer(self, word, root):
+		self.flagInverterPapeis = False
+		print(f"Sua palavra sorteada é: {word}")
+		#root = tk.Tk()
+		#serverDraw(root, self.sockUDP)
 
+		#gemini para matar a janela
+		def check_end():
+			if self.flagInverterPapeis:
+				root.destroy()
+			else:
+				root.after(100, check_end)
+		check_end()
 
-if __name__ == '__main__':
-    main()
+		t_resp = threading.Thread(target=self.tryResponse, args=((word,)), daemon=True) 
+		t_resp.start()
+		root.mainloop()
+		t_resp.join()
+
+	#verificar se a resposta está correta
+	def tryResponse(self, word):
+		#definir timer para o adversario tentar acertar a palavra
+		self.sockUDP.settimeout(15)
+		try:
+			#roda ate ele acertar ou o tempo acabar
+			while True:
+
+				#recupera mensagem do cliente
+				data, addr = self.sockUDP.recvfrom(4096)
+				msg = data.decode('utf-8').strip()
+				
+				#inicia comparaçao de mensagem com resposta verdadeira
+				if msg.lower() == word.lower():  
+					self.sockUDP.sendto(True.encode('utf-8'), addr)
+					print(f"Acertou: {msg}")
+					self.flagInverterPapeis = True
+					break
+				else:
+					self.sockUDP.sendto(False.encode('utf-8'), addr)
+					print(f"Errado: '{msg}' \n Tente novamente.")
+
+		except socket.timeout:
+			self.sockUDP.sendto('Tempo esgotado!'.encode('utf-8'), addr)
+			self.flagInverterPapeis = False		
+		
+		except Exception as e:
+			print(f"Erro ao receber resposta: {e}")

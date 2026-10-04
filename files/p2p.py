@@ -105,11 +105,6 @@ class clientDraw:
 			except Exception:
 				break
 
-
-
-
-
-
 #funcao para conexao 
 def listen():#escuta o handshake
 	server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
