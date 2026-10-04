@@ -26,7 +26,13 @@ def main():
     net_object = None
     
     try:
-        opcao = int(input("Hospedar (0) ou Entrar (1) em um servidor?"))
+        opcao = str(input("Hospedar um servidor ou Entrar em um servidor? (Responda com HOST ou JOIN)"))
+        
+        if opcao.lower() == "host":
+            opcao1 = 0
+        if opcao.lower() == "join":
+            opcao1 = 1
+        
         if(opcao == 0): #esta criando um servidor novo (servidor). Tem a prioridade para começar a desenhar na tela
             flagDesenhista = True
             net_object = Server(HOST, TCP_PORT, UDP_PORT)
