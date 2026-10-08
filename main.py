@@ -55,6 +55,7 @@ def main():
         if(opcao1 == 0): #esta criando um servidor novo (servidor). Tem a prioridade para começar a desenhar na tela
             net_object = Server(BIND_ADDRESS, TCP_PORT, UDP_PORT)
             net_object.start()
+            print(f"Aguardando outro jogador... Passe este IP para ele: {getLocalIp()} (TCP {TCP_PORT} / UDP {UDP_PORT})")
             while len(net_object.connections) == 0: # Sugestão do claude para não consumir CPU enquanto aguarda conexões
                 time.sleep(0.1) 
             flagDesenhista = net_object.flagDesenhista
