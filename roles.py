@@ -107,11 +107,11 @@ class Guesser:
 
         #dica do gemini: pausar a janela do Tkinter sem precisar destrui-la
         def check_end():
-            if self.flagInverterPapeis:
+            if self.flagInverterPapeis or time.time() >= deadline:
                 root.quit()
             else:
                 self._timer_id = root.after(100, check_end)
-        check_end()
+                check_end()
 
         t_listen = threading.Thread(target=self.listen_server, args=(interface,), daemon=True)
         t_listen.start()
