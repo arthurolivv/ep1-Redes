@@ -9,7 +9,7 @@ class gameInterface:
         self.root = root
         self.net_object = net_object
         self.isDrawer = isDrawer
-
+        self.cor = 0
 
         #apaga conteudo do canvas atual antes de iniciar um novo
         for widget in self.root.winfo_children():
@@ -41,15 +41,20 @@ class gameInterface:
         if isDrawer:
             self.canvas.bind('<ButtonPress-1>', self.start_draw)
             self.canvas.bind('<B1-Motion>', self.draw)
+            self.canvas.bind('<ButtonPress-2>', self.changeColor)
+            self.canvas.bind('<ButtonPress-3>', self.changeColor)
             self.canvas.bind('<ButtonRelease-1>', self.stop_draw)
     
     def start_draw(self, event):
         self.last_x, self.last_y = event.x, event.y
+    def changeColor(self, event):
+        self.cor = 1 - self.cor #altera de 0 pra 1 ou 1 pra 0 de forma facil
+            
 
     def draw(self, event):
         x, y = event.x, event.y
-        self.draw_line(self.last_x, self.last_y, x, y, color[0])
-        self.send_line(self.last_x, self.last_y, x, y, color[0])
+        self.draw_line(self.last_x, self.last_y, x, y, color[self.cor])
+        self.send_line(self.last_x, self.last_y, x, y, color[self.cor])
         self.last_x, self.last_y = x, y
 
     def stop_draw(self, event):
@@ -60,7 +65,7 @@ class gameInterface:
         self.canvas.create_line(x1, y1, x2, y2, width=3, fill=color, capstyle=tk.ROUND, smooth=True)    
                 
     def send_line(self, x1, y1, x2, y2, color):
-        msg = f"DRAW:{x1},{y1},{x2},{y2},{color}\n"
+        msg = f"DRAW:{x1},{y1},{x2},{y2},{color}\n" ####COR e vetor
         if self.connections:
             for conn in self.connections:
                 self.sock.sendto(msg.encode('utf-8'), conn)

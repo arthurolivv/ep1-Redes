@@ -19,7 +19,6 @@ flagDesenhista = None
 client = None
 server = None
 flagInverterPapeis = False
-
 def main():
     global flagDesenhista
     global flagInverterPapeis
@@ -33,17 +32,17 @@ def main():
         if opcao.lower() == "join":
             opcao1 = 1
         
-        if(opcao == 0): #esta criando um servidor novo (servidor). Tem a prioridade para começar a desenhar na tela
-            flagDesenhista = True
+        if(opcao1 == 0): #esta criando um servidor novo (servidor). Tem a prioridade para começar a desenhar na tela
             net_object = Server(HOST, TCP_PORT, UDP_PORT)
             net_object.start()
             while len(net_object.connections) == 0: # Sugestão do claude para não consumir CPU enquanto aguarda conexões
                 time.sleep(0.1) 
+            flagDesenhista = net_object.flagDesenhista
                 
-        elif(opcao == 1): #esta entrando em um servidor (cliente)
-            flagDesenhista = False
+        elif(opcao1 == 1): #esta entrando em um servidor (cliente)
             net_object = Client()
-            net_object.connectTo(HOST, TCP_PORT, UDP_PORT) 
+            flagDesenhista = int(random.randint(0,1))
+            net_object.connectTo(HOST, TCP_PORT, UDP_PORT, flagDesenhista) 
         
     except ValueError as e:
         print(f"Opção Inválida: {e} \n Encerrando o programa.")
