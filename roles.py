@@ -41,11 +41,21 @@ class Drawer:
     def tryResponse(self, word):
 
         self.sockUDP.settimeout(1) 
-        client_addr = None
+        client_addr = None  
         start_time = time.time()
 
         #roda ate ele acertar ou o tempo acabar
         while not self.flagInverterPapeis:
+
+            #verifica se o tempo de adivinhação foi excedido, se sim -> inverte os papeis
+            if time.time() - start_time >= 30:
+                if client_addr:
+                    try:
+                        self.sockUDP.sendto(b'SYS:timeout', client_addr)
+                    except:
+                        pass
+                self.flagInverterPapeis = True
+                break
             try:
                 #aguarda mensagem do cliente
                 data, addr = self.sockUDP.recvfrom(4096)
@@ -90,6 +100,10 @@ class Guesser:
     def roundGuesser(self, root, interface):
         self.flagInverterPapeis = False
         self._timer_id = None
+
+        #garantia para caso o pacote UDP de timeout for perdido o jogador n ficar preso
+        deadline = time.time() + 33  # 30s de round + 3s extras pra atraso de pacotes
+
 
         #dica do gemini: pausar a janela do Tkinter sem precisar destrui-la
         def check_end():
@@ -142,27 +156,28 @@ class Guesser:
 
             except socket.timeout:
                 continue
-            except Exception:
-                break
-
-    def askResponse(self):
-        print("Insira sua tentativa de resposta:")
-        while not self.flagInverterPapeis:
-            try:
-                #espera 1 segundo por um input no terminal se nada for digitado ignora e reinicia desse jeito nao trava a thread 
-                ready_outputs, _, _ = select.select([sys.stdin], [], [], 1.0)
-                    
-                if ready_outputs:
-                    response = sys.stdin.readline().strip()
-                    
-                    if not response:
-                        continue
-
-                    send = f"CHAT:{response}\n"
-                    self.sockUDP.sendto(send.encode('utf-8'), (self.HOST, self.UDP_PORT))
-
             except Exception as e:
-                print(f"Erro ao enviar resposta: {e}")
+                print(f"Erro listen_server: {e}")
+                continue
+
+    # def askResponse(self):
+    #     print("Insira sua tentativa de resposta:")
+    #     while not self.flagInverterPapeis:
+    #         try:
+    #             #espera 1 segundo por um input no terminal se nada for digitado ignora e reinicia desse jeito nao trava a thread 
+    #             ready_outputs, _, _ = select.select([sys.stdin], [], [], 1.0)
+                    
+    #             if ready_outputs:
+    #                 response = sys.stdin.readline().strip()
+                    
+    #                 if not response:
+    #                     continue
+
+    #                 send = f"CHAT:{response}\n"
+    #                 self.sockUDP.sendto(send.encode('utf-8'), (self.HOST, self.UDP_PORT))
+
+    #         except Exception as e:
+    #             print(f"Erro ao enviar resposta: {e}")
 
     def askResponse(self):
         print("Insira sua tentativa de resposta:")
