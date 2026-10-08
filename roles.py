@@ -105,13 +105,18 @@ class Guesser:
         deadline = time.time() + 33  # 30s de round + 3s extras pra atraso de pacotes
 
 
-        #dica do gemini: pausar a janela do Tkinter sem precisar destrui-la
+        #dica do gemini: pausar a janela do Tkinter sem precisar destrui-l
         def check_end():
-            if self.flagInverterPapeis or time.time() >= deadline:
+            if self.flagInverterPapeis:
+                root.quit()
+            elif time.time() >= deadline:
+                #sinaliza inversão de papéis
+                self.flagInverterPapeis = True 
                 root.quit()
             else:
                 self._timer_id = root.after(100, check_end)
-                check_end()
+        
+        check_end()
 
         t_listen = threading.Thread(target=self.listen_server, args=(interface,), daemon=True)
         t_listen.start()
