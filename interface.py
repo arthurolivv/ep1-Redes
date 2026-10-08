@@ -33,7 +33,7 @@ class gameInterface:
 
         self.root.title(f"Seu IP: {self.net_object.HOST} = {role}")
         self.root.attributes('-topmost', True)
-
+        self.root.protocol("WM_DELETE_WINDOW", self.close_the_fucking_all)
         self.canvas = tk.Canvas(root, width=800, height=600, bg='white')
         self.canvas.pack()
         self.last_x, self.last_y = None, None
@@ -83,3 +83,9 @@ class gameInterface:
                         x1, y1, x2, y2 = map(int, parts[:4])
                         line_color = parts[4]
                         self.root.after(0, self.draw_line, x1, y1, x2, y2, line_color)
+    def close_the_fucking_all(self):
+          print("aaaaaaaa")
+          msg = f"CLOSE: fechaTudoAiMano"
+          if self.connections:
+                  for conn in self.connections:
+                      self.sock.sendto(msg.encode('utf-8'), conn)
