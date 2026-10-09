@@ -159,6 +159,9 @@ class Guesser:
                     #interface.process_draw(msg)
                     interface.root.after(0, interface.process_draw, msg)
 
+                elif msg.startswith("CLOSE"):
+                    interface.root.after(0, interface.process_draw, msg)
+
             except socket.timeout:
                 continue
             except Exception as e:

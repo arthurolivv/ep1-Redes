@@ -1,3 +1,4 @@
+import sys
 import tkinter as tk
 import threading
 from server import Server
@@ -72,9 +73,10 @@ class gameInterface:
     
     def process_draw(self, msg):
             # Quebra a mensagem inteira separando pelos '\n'
-            linhas = msg.split('\n')
+            lines = msg.split('\n')
             
-            for line in linhas:
+            for line in lines:
+                #processar desenho
                 if line and line.startswith("DRAW:"):
                     line = line.replace("DRAW:", "")
                     parts = line.split(',')
@@ -83,15 +85,20 @@ class gameInterface:
                         x1, y1, x2, y2 = map(int, parts[:4])
                         line_color = parts[4]
                         self.root.after(0, self.draw_line, x1, y1, x2, y2, line_color)
+                #processar encerramento voluntario
                 if line and line.startswith("CLOSE:"):
+                    print(f"{lines}")
                     self.root.destroy()
+                    #fecha o sockwet apenas apos o recebimento - se fechar antes o outro jogador n fecha suas aplicaçoes tb
+                    self.sock.close()
+                    sys.exit(0)
 
 
     def close_the_fucking_all(self):
-        print("aaaaaaaa")
-        msg = f"CLOSE: fechaTudoAiMano"
+        print("Você encerrou a aplicação")
+        msg = f"CLOSE: Aplicação será encerrada...\n"
         if self.connections:
                 for conn in self.connections:
                     self.sock.sendto(msg.encode('utf-8'), conn)
         self.root.destroy()
-                      
+        sys.exit(0)
