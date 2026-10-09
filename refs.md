@@ -7,3 +7,7 @@ tkinter bibliografia
 
 https://stackoverflow.com/questions/6824681/get-a-random-boolean-in-python
 random boolean
+
+https://stackoverflow.com/questions/111155/how-do-i-handle-the-window-close-event-in-tkinter
+
+fecha
