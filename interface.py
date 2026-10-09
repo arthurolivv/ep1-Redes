@@ -1,6 +1,7 @@
 import sys
 import tkinter as tk
 import threading
+import os
 from server import Server
 
 color = ['black', 'red'] # black (#000000) e o red (#FF0000)
@@ -85,20 +86,20 @@ class gameInterface:
                         x1, y1, x2, y2 = map(int, parts[:4])
                         line_color = parts[4]
                         self.root.after(0, self.draw_line, x1, y1, x2, y2, line_color)
-                #processar encerramento voluntario
-                if line and line.startswith("CLOSE:"):
-                    print(f"{lines}")
-                    self.root.destroy()
-                    #fecha o sockwet apenas apos o recebimento - se fechar antes o outro jogador n fecha suas aplicaçoes tb
-                    self.sock.close()
-                    sys.exit(0)
 
 
     def close_the_fucking_all(self):
-        print("Você encerrou a aplicação")
-        msg = f"CLOSE: Aplicação será encerrada...\n"
+        print("Janela Fechada, avisando o outro jogador...")
+        msg = f"CLOSE: closeEverything\n" #a parte q realmente importa aqui é o CLOSE:
         if self.connections:
                 for conn in self.connections:
-                    self.sock.sendto(msg.encode('utf-8'), conn)
+                    try:
+                        #envia no minimo 20x para garantir a entrega e nenhum pacoter se perder
+                        for i in range(20):
+                            self.sock.sendto(msg.encode('utf-8'), conn)
+                    except Exception:
+                        pass
         self.root.destroy()
-        sys.exit(0)
+        os._exit(0)
+
+                      

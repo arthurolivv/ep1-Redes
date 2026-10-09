@@ -33,7 +33,7 @@ def getLocalIp():
         s.close()
 
 def askHostIp():
-    # o IP do host pode vir por argumento (python main.py 192.168.0.10) ou ser digitado
+    # o IP do host vem por argumento
     if len(sys.argv) > 1:
         return sys.argv[1]
     ip = input("IP do computador que está hospedando (Enter para 127.0.0.1): ").strip()
