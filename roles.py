@@ -4,6 +4,7 @@ import socket
 import sys
 import threading
 import time
+import os
 
 
 class Drawer:
@@ -76,6 +77,11 @@ class Drawer:
                     else:
                         self.sockUDP.sendto("SYS:fail".encode('utf-8'), addr)
                         print(f"Errado: '{msg}'")
+                elif msg.startswith("CLOSE:"):
+                    print("\nO outro jogador finalizou o jogo\n")
+                    os._exit(0)
+
+                                            
                 else:
                     continue
 
@@ -158,6 +164,9 @@ class Guesser:
                 elif msg.startswith("DRAW:"):
                     #interface.process_draw(msg)
                     interface.root.after(0, interface.process_draw, msg)
+                elif msg.startswith("CLOSE:"):
+                    print("\nO outro jogador finalizou o jogo\n")
+                    os._exit(0)
 
             except socket.timeout:
                 continue

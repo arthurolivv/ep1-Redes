@@ -1,5 +1,6 @@
 import tkinter as tk
 import threading
+import os
 from server import Server
 
 color = ['black', 'red'] # black (#000000) e o red (#FF0000)
@@ -83,15 +84,15 @@ class gameInterface:
                         x1, y1, x2, y2 = map(int, parts[:4])
                         line_color = parts[4]
                         self.root.after(0, self.draw_line, x1, y1, x2, y2, line_color)
-                if line and line.startswith("CLOSE:"):
-                    self.root.destroy()
 
 
     def close_the_fucking_all(self):
-        print("aaaaaaaa")
-        msg = f"CLOSE: fechaTudoAiMano"
+        print("Janela Fechada, avisando o outro jogador...")
+        msg = f"CLOSE: fechaTudoAiMano\n"
         if self.connections:
                 for conn in self.connections:
                     self.sock.sendto(msg.encode('utf-8'), conn)
         self.root.destroy()
+        os._exit(0)
+
                       
